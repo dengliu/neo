@@ -1,0 +1,5 @@
+*.DS_Store
+*.dat
+*.out
+*.swp
+*.vim
