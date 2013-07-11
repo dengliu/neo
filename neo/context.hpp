@@ -21,7 +21,7 @@
 	#include <fcntl.h>
 	#include <time.h>
 	#include <unistd.h>
-	#include <neo/aio_syscall.h>
+	#include <neo/aio_syscall.hpp>
 #elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
 	#include <aio.h>
 	#include <fcntl.h>
@@ -116,7 +116,7 @@ private:
 public:
 	explicit context(const unsigned n = 4)
 	{
-		auto r = ::io_setup(n, &c);
+		auto r = io_setup(n, &c);
 		if (r == -1) {
 			throw std::system_error{errno, std::system_category()};
 		}
@@ -129,7 +129,7 @@ public:
 
 	~context()
 	{
-		::io_destroy(c);
+		io_destroy(c);
 	}
 
 	/*
@@ -145,7 +145,7 @@ public:
 	void submit(operation<Ts, true>&... ops) const
 	{
 		iocb* l[] = { ops... };
-		auto r = ::io_submit(c, sizeof...(ops), l);
+		auto r = io_submit(c, sizeof...(ops), l);
 		if (r == -1) {
 			throw std::system_error{errno, std::system_category()};
 		}
@@ -156,7 +156,7 @@ public:
 	{
 		io_event e[1];
 		auto t = to_timespec(d);
-		auto r = ::io_getevents(c, 1, 1, e, &t);
+		auto r = io_getevents(c, 1, 1, e, &t);
 		if (r == 1) {
 			return true;
 		}

@@ -20,7 +20,7 @@
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX
 	#include <cstring>
-	#include <neo/aio_syscall.h>
+	#include <neo/aio_syscall.hpp>
 #elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
 	#include <cstring>
 	#include <aio.h>
@@ -90,12 +90,12 @@ public:
 	}
 
 	file_descriptor handle() const { return b.aio_fildes; }
-	pointer buffer() const { return static_cast<pointer>(b.aio_buf); }
+	pointer buffer() const { return reinterpret_cast<pointer>(b.aio_buf); }
 	size_type count() const { return b.aio_nbytes; }
 	offset_type offset() const { return b.aio_offset; }
 
 	void handle(const file_descriptor fd) { b.aio_fildes = fd; }
-	void buffer(const pointer p) { b.aio_buf = static_cast<uint64_t>(p); }
+	void buffer(const pointer p) { b.aio_buf = reinterpret_cast<uint64_t>(p); }
 	void count(const size_type n) { b.aio_nbytes = n; }
 	void offset(const offset_type off) { b.aio_offset = off; }
 
