@@ -10,7 +10,7 @@
 The `neo` library provides a simple, uniform interface for high-performance,
 asynchronous file IO in C++.
 
-# Planned features.
+# Planned features
 
 - Create Rakefile.
 - Implement `neo::iostream`.
