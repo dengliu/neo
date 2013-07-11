@@ -45,6 +45,7 @@ template <open_mode OpenMode, bool Cache>
 class handle
 {
 public:
+	using size_type       = std::size_t;
 	using offset_type     = off_t;
 	using integer         = std::underlying_type<open_mode>::type;
 	using file_descriptor = int;
@@ -93,8 +94,8 @@ public:
 
 	template <class T = void>
 	auto allocate(
-		buffer_type&      buf,
-		const std::size_t n,
+		buffer_type&    buf,
+		const size_type n,
 		const T* = 0
 	) -> typename std::enable_if<
 		std::is_same<T, T>::value && Cache,
@@ -106,8 +107,8 @@ public:
 
 	template <class T = void>
 	auto allocate(
-		buffer_type&      buf,
-		const std::size_t n,
+		buffer_type&    buf,
+		const size_type n,
 		const T* = 0
 	) -> typename std::enable_if<
 		std::is_same<T, T>::value && !Cache,
@@ -137,6 +138,7 @@ template <open_mode OpenMode, bool Cache>
 class handle
 {
 public:
+	using size_type       = std::size_t;
 	using offset_type     = off_t;
 	using integer         = std::underlying_type<open_mode>::type;
 	using file_descriptor = int;
@@ -174,7 +176,7 @@ public:
 
 	offset_type file_size() const { return fs; }
 
-	void allocate(buffer_type& buf, const std::size_t n)
+	void allocate(buffer_type& buf, const size_type n)
 	{
 		buf.reset(new char[n]);
 	}

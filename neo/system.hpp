@@ -14,7 +14,7 @@
 namespace neo
 {
 
-static constexpr unsigned default_read_buffer_size = 81920;
+static constexpr unsigned default_input_buffer_size = 81920;
 
 }
 

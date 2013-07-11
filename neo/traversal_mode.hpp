@@ -20,7 +20,7 @@ enum class traversal_mode : unsigned
 };
 
 static constexpr traversal_mode sequential = traversal_mode::sequential;
-static constexpr traversal_mode random = traversal_mode::random;
+static constexpr traversal_mode random     = traversal_mode::random;
 
 NEO_DEFINE_BITMASK_TYPE(traversal_mode)
 
