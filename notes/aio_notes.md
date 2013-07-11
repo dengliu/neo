@@ -60,7 +60,9 @@ boundary. This can be accomplished by `posix_memalign`.
 
 ## OS X
 
-Information goes here.
+The `aio` interface for OS X is similar to that of Linux. As explained
+[here][aio_on_osx], each `aio_read` or `aio_write` call must be accompanied by
+an `aio_return` call. Otherwise, resources will be leaked.
 
 ## Windows
 
