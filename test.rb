@@ -3,7 +3,7 @@
 def create_test_file()
 	`rm -f dat/*`
 	puts "Generating 1 Gb test file for benchmarking."
-	`time dd if=/dev/urandom of=dat/test.dat bs=4096 count=262144`
+	`dd if=/dev/urandom of=dat/test.dat bs=4096 count=262144`
 end
 
 def flush_page_cache()

@@ -14,6 +14,7 @@
 #include <iostream>
 #include <memory>
 #include <system_error>
+#include <ccbase/format.hpp>
 #include <ccbase/platform.hpp>
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX
@@ -50,7 +51,7 @@ test(const char* path, const int n)
 		throw std::system_error{errno, std::system_category()};
 	}
 
-	auto del = [](char* p) { std::free(p); }
+	auto del = [](char* p) { std::free(p); };
 	std::unique_ptr<char[], decltype(del)> buf{p, del};
 	
 	int c;
