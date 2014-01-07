@@ -33,7 +33,7 @@ namespace neo
 
 template <
 	open_mode OpenMode,
-	bool      Asynchronous,
+	bool      UseAsyncIO,
 	bool      UseDirectIO
 >
 class streambuf;
@@ -41,10 +41,10 @@ class streambuf;
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX
 
 // TODO
-// If Asynchronous is true but the file is smaller than the chosen buffer size,
+// If UseAsyncIO is true but the file is smaller than the chosen buffer size,
 // then revert to blocking IO.
 //
-// Asynchronous = false => Use blocking IO
+// UseAsyncIO = false => Use blocking IO
 //
 // Add support for seek directions, so that f and l are only stored when
 // necessary.

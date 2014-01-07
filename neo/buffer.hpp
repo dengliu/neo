@@ -22,8 +22,8 @@ template <
 	io_mode        IOMode,
 	open_mode      OpenMode,
 	traversal_mode TraversalMode,
-	bool           Asynchronous,
-	bool           UseDirectIO
+	bool           UseDirectIO,
+	bool           UseAsyncIO
 >
 class buffer;
 
@@ -31,34 +31,34 @@ template <
 	io_mode        IOMode,
 	open_mode      OpenMode,
 	traversal_mode TraversalMode,
-	bool           Asynchronous,
-	bool           UseDirectIO
+	bool           UseDirectIO,
+	bool           UseAsyncIO
 >
-class buffer<input, OpenMode, sequential, Asynchronous, UseDirectIO>
+class buffer<input, OpenMode, sequential, UseDirectIO, UseAsyncIO>
 {
 public:
-	using handle_type      = handle<OpenMode, UseDirectIO>;
-	using context_type     = context<input, Asynchronous>;
-	using input_operation  = operation<input, Asynchronous>;
-	using output_operation = operation<output, Asynchronous>;
+	using handle_type   = handle<OpenMode, UseDirectIO>;
+	using context_type  = context<input, UseAsyncIO>;
+	using read_request  = operation<input, UseAsyncIO>;
+	using write_request = operation<output, UseAsyncIO>;
 
 	using size_type   = typename handle::size_type;
 	using offset_type = typename handle::offset_type;
 	using buffer_type = typename handle::buffer_type;
 private:
-	handle_type h;
-	input_operation i1;
-	input_operation i2;
-	buffer_type b1;
-	buffer_type b2;
-	size_type n;
-	bool db{Asynchronous};
-	context_type c;
+	handle_type  h;
+	read_request rr1;
+	read_request rr2;
+	buffer_type  buf1;
+	buffer_type  buf2;
+	size_type    n;
+	bool         use_dbuf{UseAsyncIO};
+	context_type c{};
 public:
 	explicit buffer(
 		const char* path,
 		const size_type n = default_input_buffer_size
-	) : h{path}, i1{h}, i2{h}, n{n}, c{}
+	) : h{path}, rr1{h}, rr2{h}, n{n}, c{}
 	{
 		if (h.file_size() <= n) {
 			db = false;
@@ -81,18 +81,7 @@ public:
 
 	}
 
-	void flush(const offset_type off, const T* = 0) ->
-	std::enable_if<>
-	{
-
-	}
-
 	void input_strategy(const traversal_mode m)
-	{
-
-	}
-
-	void output_strategy(const traversal_mode m)
 	{
 
 	}
