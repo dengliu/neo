@@ -12,7 +12,7 @@ blocking or non-blocking IO is used.
 
 ### Reading
 
-If asynchronous IO is available and the input file is "large enough", the input
+If asynchronous IO is available and the input file is large enough, the input
 stream will maintain two buffers and swap between them. Initially, both buffers
 are sent to the kernel to be populated with consecutive parts of the file. The
 programmer interacts with the data by means of a file pointer that is initially
@@ -23,8 +23,8 @@ the file. This process continues until the file is read. If the buffer size is
 chosen correctly, the data processing comes at no additional cost.
 
 Seeking into the file will, by default, cause both internal buffers to be
-populated, as described earlier. However, the interface will also accomodate for
-the possibility that the user only wishes to read a portion of the file
+populated, as described earlier. However, the interface will also accommodate
+for the possibility that the user only wishes to read a portion of the file
 beginning at an offset. In this case, only the amount of data necessary will be
 read from the file.
 

@@ -3,16 +3,26 @@
 ** Author:	Aditya Ramesh
 ** Date:	07/09/2013
 ** Contact:	_@adityaramesh.com
+**
+** The handle class is an abstraction over the low-level platform functions for
+** opening and closing file handles, and for allocating IO buffers that are good
+** for IO operations involving the file.
+**
+** The reason the IO buffer allocation is coupled to the file handle is that the
+** operating system may impose various alignment restrictions on the buffer if
+** direct IO is used. See `notes/aio_notes.md` for details regarding the
+** alignment constraints.
 */
 
 #ifndef ZE0BB04B6_F20C_4FF0_437F_21A823AF7523
 #define ZE0BB04B6_F20C_4FF0_437F_21A823AF7523
 
+#include <cstdint>
 #include <memory>
 #include <system_error>
 #include <ccbase/platform.hpp>
+#include <neo/file_size.hpp>
 #include <neo/open_mode.hpp>
-#include <neo/size.hpp>
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
     PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
@@ -25,50 +35,49 @@
 	#error "Unsupported kernel."
 #endif
 
-namespace neo
-{
+namespace neo {
 
-template <open_mode OpenMode, bool Cache>
+template <open_mode OpenMode, bool UseDirectIO>
 class handle;
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX
 
+namespace detail {
+
 struct deleter
 {
-	void operator()(char* p)
+	void operator()(uint8_t* p)
 	{
 		std::free(p);
 	}
 };
 
-template <open_mode OpenMode, bool Cache>
+}
+
+template <open_mode OpenMode, bool UseDirectIO>
 class handle
 {
 public:
-	using size_type       = std::size_t;
+	using size_type       = size_t;
 	using offset_type     = off_t;
 	using integer         = std::underlying_type<open_mode>::type;
 	using file_descriptor = int;
 
 	using buffer_type =
 	typename std::conditional<
-		Cache,
-		std::unique_ptr<char[]>,
-		std::unique_ptr<char[], deleter>
+		!UseDirectIO,
+		std::unique_ptr<uint8_t[]>,
+		std::unique_ptr<uint8_t[], detail::deleter>
 	>::type;
 private:
-	static constexpr integer mode_flags = 
-	(OpenMode & read) != 0 && (OpenMode & write) != 0 ?
-	O_RDWR | static_cast<integer>(OpenMode & ~(read | write)) :
-	static_cast<integer>(OpenMode);
-
-	static constexpr integer extra_flags =
-	Cache ? static_cast<integer>(O_NOATIME) :
+	static constexpr auto extra_flags =
+	!UseDirectIO ? static_cast<integer>(O_NOATIME) :
 	static_cast<integer>(O_NOATIME | O_DIRECT);
 
-	static constexpr integer flags = mode_flags | extra_flags;
+	static constexpr auto flags =
+	posix(OpenMode) | extra_flags;
 
-	int fd;
+	int fd{-1};
 	offset_type fs;
 public:
 	explicit handle(const char* path) :
@@ -77,13 +86,25 @@ public:
 		if (fd == -1) {
 			throw std::system_error{errno, std::system_category()};
 		}
-		fs = size(fd);
+		fs = detail::size(fd);
 	}
 
 	handle(const handle&)            = delete;
-	handle(handle&&)                 = delete;
 	handle& operator=(const handle&) = delete;
-	handle& operator=(handle&&)      = delete;
+
+	handle(handle&& rhs) noexcept :
+	fd{rhs.fd}, rs{rhs.fs}
+	{
+		rhs.fd = -1;
+	}
+
+	handle& operator=(handle&& rhs) noexcept
+	{
+		fd = rhs.fd;
+		fs = rhs.fs;
+		rhs.fd = -1;
+		return *this;
+	}
 
 	~handle()
 	{
@@ -98,11 +119,11 @@ public:
 		const size_type n,
 		const T* = 0
 	) -> typename std::enable_if<
-		std::is_same<T, T>::value && Cache,
+		std::is_same<T, T>::value && !UseDirectIO,
 		void
 	>::type
 	{
-		buf.reset(new char[n]);
+		buf.reset(new uint8_t[n]);
 	}
 
 	template <class T = void>
@@ -111,7 +132,7 @@ public:
 		const size_type n,
 		const T* = 0
 	) -> typename std::enable_if<
-		std::is_same<T, T>::value && !Cache,
+		std::is_same<T, T>::value && UseDirectIO,
 		void
 	>::type
 	{
@@ -121,7 +142,7 @@ public:
 			assert(n % s == 0 && "Buffer size must be a multiple of the page size.");
 		#endif
 
-		char* p;
+		uint8_t* p;
 		auto r = ::posix_memalign((void**)&p, 512, n);
 		if (r != 0) {
 			throw std::system_error{r, std::system_category()};
@@ -134,20 +155,17 @@ public:
 
 #elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
 
-template <open_mode OpenMode, bool Cache>
+template <open_mode OpenMode, bool UseDirectIO>
 class handle
 {
 public:
-	using size_type       = std::size_t;
+	using size_type       = size_t;
 	using offset_type     = off_t;
 	using integer         = std::underlying_type<open_mode>::type;
 	using file_descriptor = int;
-	using buffer_type     = std::unique_ptr<char[]>;
+	using buffer_type     = std::unique_ptr<uint8_t[]>;
 private:
-	static constexpr integer flags = 
-	(OpenMode & read) != 0 && (OpenMode & write) != 0 ?
-	O_RDWR | static_cast<integer>(OpenMode & ~(read | write)) :
-	static_cast<integer>(OpenMode);
+	static constexpr auto flags = posix(OpenMode)
 
 	int fd;
 	offset_type fs;
@@ -158,16 +176,28 @@ public:
 		if (fd == -1) {
 			throw std::system_error{errno, std::system_category()};
 		}
-		if (!Cache && ::fcntl(fd, F_NOCACHE, 1) == -1) {
+		if (UseDirectIO && ::fcntl(fd, F_NOCACHE, 1) == -1) {
 			throw std::system_error{errno, std::system_category()};
 		}
-		fs = size(fd);
+		fs = detail::size(fd);
 	}
 
 	handle(const handle&)            = delete;
-	handle(handle&&)                 = delete;
 	handle& operator=(const handle&) = delete;
-	handle& operator=(handle&&)      = delete;
+
+	handle(handle&& rhs) noexcept :
+	fd{rhs.fd}, rs{rhs.fs}
+	{
+		rhs.fd = -1;
+	}
+
+	handle& operator=(handle&& rhs) noexcept
+	{
+		fd = rhs.fd;
+		fs = rhs.fs;
+		rhs.fd = -1;
+		return *this;
+	}
 
 	~handle()
 	{
@@ -178,7 +208,7 @@ public:
 
 	void allocate(buffer_type& buf, const size_type n)
 	{
-		buf.reset(new char[n]);
+		buf.reset(new uint8_t[n]);
 	}
 
 	operator file_descriptor() const { return fd; }

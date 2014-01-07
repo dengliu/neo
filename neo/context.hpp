@@ -11,41 +11,44 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <ratio>
 #include <system_error>
 #include <ccbase/platform.hpp>
 #include <neo/io_mode.hpp>
 #include <neo/open_mode.hpp>
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX
-	#include <fcntl.h>
+	// For `timespec`.
 	#include <time.h>
-	#include <unistd.h>
+	// For `ssize_t`.
+	#include <sys/types.h>
+	// For wrappers over Linux `aio` syscalls.
 	#include <neo/aio_syscall.hpp>
 #elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+	// For `aio_read`, `aio_write`, `aio_suspend`, and `aio_return`.
 	#include <aio.h>
-	#include <fcntl.h>
+	// For `timespec`.
 	#include <time.h>
-	#include <unistd.h>
+	// For `ssize_t`.
+	#include <sys/types.h>
 #endif
 
-namespace neo
-{
+namespace neo {
 
-using std::ratio;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
 using std::chrono::duration;
 using std::chrono::duration_cast;
 
 template <io_mode Type, bool Asynchronous>
-class operation;
+class request;
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
     PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
 
+namespace detail {
+
 template <class Rep, class Period>
-static inline timespec 
+static CC_ALWAYS_INLINE timespec 
 to_timespec(const duration<Rep, Period> d)
 {
 	return {
@@ -53,6 +56,44 @@ to_timespec(const duration<Rep, Period> d)
 		duration_cast<nanoseconds>(d).count() -
 		1000000000 * duration_cast<seconds>(d).count()
 	};
+}
+
+static CC_ALWAYS_INLINE ssize_t
+safe_pread(int fd, void* buf, size_t count, off_t offset)
+{
+	auto rem = count;
+	do {
+		auto r = ::pread(fd, (uint8_t*)buf + count - rem, rem,
+			offset + count - rem);
+		if (r <= 0) {
+			return r;
+		}
+		else {
+			rem -= r;
+		}
+	}
+	while (rem > 0);
+	return count;
+}
+
+static CC_ALWAYS_INLINE ssize_t
+safe_pwrite(int fd, void* buf, size_t count, off_t offset)
+{
+	auto rem = count;
+	do {
+		auto r = ::pwrite(fd, (uint8_t*)buf + count - rem, rem,
+			offset + count - rem);
+		if (r <= 0) {
+			return r;
+		}
+		else {
+			rem -= r;
+		}
+	}
+	while (rem > 0);
+	return count;
+}
+
 }
 
 template <bool Asynchronous>
@@ -69,37 +110,51 @@ public:
 	context& operator=(context&&)      = delete;
 
 	template <io_mode... Ts>
-	void submit(operation<Ts, false>&... ops) const
+	void submit(request<Ts, false>&... ops) const
 	{
 		submit_impl(ops...);
 	}
 
 	template <io_mode IOMode, class Rep = uint64_t, class Period = std::nano>
-	constexpr bool poll(operation<IOMode, false>&, const duration<Rep, Period>) const
+	constexpr bool poll(request<IOMode, false>&, const duration<Rep, Period>) const
 	{
 		return true;
 	}
 private:
 	template <io_mode IOMode, class... Ts>
-	void submit_impl(operation<IOMode, false>& op, Ts&... ts) const
+	void submit_impl(request<IOMode, false>& op, Ts&... ts) const
 	{
+		using detail::safe_pread;
+		using detail::safe_pwrite;
+
 		if ((IOMode & input) != 0) {
-			::pread(op.handle(), op.buffer(), op.count(), op.offset());
+			if (safe_pread(op.handle(), op.buffer(), op.count(), op.offset()) < 0) {
+				throw std::system_error{errno, std::system_category()};
+			}
 		}
 		else {
-			::pwrite(op.handle(), op.buffer(), op.count(), op.offset());
+			if (safe_pwrite(op.handle(), op.buffer(), op.count(), op.offset()) < 0) {
+				throw std::system_error{errno, std::system_category()};
+			}
 		}
 		submit_impl(ts...);
 	}
 
 	template <io_mode IOMode>
-	void submit_impl(operation<IOMode, false>& op) const
+	void submit_impl(request<IOMode, false>& op) const
 	{
+		using detail::safe_pread;
+		using detail::safe_pwrite;
+
 		if ((IOMode & input) != 0) {
-			::pread(op.handle(), op.buffer(), op.count(), op.offset());
+			if (safe_pread(op.handle(), op.buffer(), op.count(), op.offset()) < 0) {
+				throw std::system_error{errno, std::system_category()};
+			}
 		}
 		else {
-			::pwrite(op.handle(), op.buffer(), op.count(), op.offset());
+			if (safe_pwrite(op.handle(), op.buffer(), op.count(), op.offset()) < 0) {
+				throw std::system_error{errno, std::system_category()};
+			}
 		}
 	}
 };
@@ -116,8 +171,7 @@ private:
 public:
 	explicit context(const unsigned n = 4)
 	{
-		auto r = io_setup(n, &c);
-		if (r == -1) {
+		if (detail::io_setup(n, &c) == -1) {
 			throw std::system_error{errno, std::system_category()};
 		}
 	}
@@ -129,7 +183,7 @@ public:
 
 	~context()
 	{
-		io_destroy(c);
+		detail::io_destroy(c);
 	}
 
 	/*
@@ -142,21 +196,21 @@ public:
 	*/
 	
 	template <io_mode... Ts>
-	void submit(operation<Ts, true>&... ops) const
+	void submit(request<Ts, true>&... ops) const
 	{
-		iocb* l[] = { ops... };
-		auto r = io_submit(c, sizeof...(ops), l);
+		iocb* l[] = {ops...};
+		auto r = detail::io_submit(c, sizeof...(ops), l);
 		if (r == -1) {
 			throw std::system_error{errno, std::system_category()};
 		}
 	}
 
 	template <io_mode IOMode, class Rep = uint64_t, class Period = std::nano>
-	bool poll(operation<IOMode, true>&, const duration<Rep, Period> d = 0) const
+	bool poll(request<IOMode, true>&, const duration<Rep, Period> d = 0) const
 	{
 		io_event e[1];
-		auto t = to_timespec(d);
-		auto r = io_getevents(c, 1, 1, e, &t);
+		auto t = detail::to_timespec(d);
+		auto r = detail::io_getevents(c, 1, 1, e, &t);
 		if (r == 1) {
 			return true;
 		}
@@ -182,13 +236,13 @@ public:
 	context& operator=(context&&)      = delete;
 
 	template <io_mode... Ts, bool... Us>
-	void submit(operation<Ts, Us>&... ops) const
+	void submit(request<Ts, Us>&... ops) const
 	{
 		submit_impl(ops...);
 	}
 
 	template <io_mode IOMode, class Rep = uint64_t, class Period = std::nano>
-	bool poll(operation<IOMode, true>& op, const duration<Rep, Period> d) const
+	bool poll(request<IOMode, true>& op, const duration<Rep, Period> d) const
 	{
 		const aiocb* l[] = {op};
 		auto t = to_timespec(d);
@@ -208,25 +262,33 @@ public:
 	}
 private:
 	template <io_mode IOMode, class... Ts>
-	void submit_impl(operation<IOMode, true>& op, Ts&... ts) const
+	void submit_impl(request<IOMode, true>& op, Ts&... ts) const
 	{
 		if ((IOMode & input) != 0) {
-			::aio_read(op);
+			if (::aio_read(op) == -1) {
+				throw std::system_error{errno, std::system_category()};
+			}
 		}
 		else {
-			::aio_write(op);
+			if (::aio_write(op) == -1) {
+				throw std::system_error{errno, std::system_category()};
+			}
 		}
 		submit_impl(ts...);
 	}
 
 	template <io_mode IOMode>
-	void submit_impl(operation<IOMode, true>& op) const
+	void submit_impl(request<IOMode, true>& op) const
 	{
 		if ((IOMode & input) != 0) {
-			::aio_read(op);
+			if (::aio_read(op) == -1) {
+				throw std::system_category{errno, std::system_category()};
+			}
 		}
 		else {
-			::aio_write(op);
+			if (::aio_write(op) == -1) {
+				throw std::system_category{errno, std::system_category()};
+			}
 		}
 	}
 };

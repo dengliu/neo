@@ -9,17 +9,15 @@
 #define ZBBA9CC37_2920_4B73_8CD5_26374197953F
 
 #include <ccbase/platform.hpp>
-#include <neo/bitmask_type.hpp>
+#include <neo/bitmask_enum.hpp>
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
     PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
-
-#include <fcntl.h>
-
+	// For `O_*` macros.
+	#include <fcntl.h>
 #endif
 
-namespace neo
-{
+namespace neo {
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
     PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
@@ -34,12 +32,31 @@ enum class open_mode : int
 
 #endif
 
-static constexpr open_mode read = open_mode::read;
-static constexpr open_mode write = open_mode::write;
-static constexpr open_mode create = open_mode::create;
+static constexpr open_mode read     = open_mode::read;
+static constexpr open_mode write    = open_mode::write;
+static constexpr open_mode create   = open_mode::create;
 static constexpr open_mode truncate = open_mode::truncate;
 
-NEO_DEFINE_BITMASK_TYPE(open_mode)
+DEFINE_ENUM_BITWISE_OPERATORS(open_mode)
+
+constexpr open_mode
+posix(const open_mode& m)
+{
+	/*
+	** `O_RDWR` is in fact not defined as `O_RDONLY | O_WRONLY`. So if the
+	** open mode has both the `read` and `write` bits set, then we need to
+	** retrieve the other bits associated with the read mode, and bitwise-or
+	** them with `O_RDWR`.
+	**
+	** Otherwise, the open mode enum value is defined to be the same as the
+	** POSIX open mode value, so we can just return the underlying integer
+	** representation.
+	*/
+
+	return (m & read) && (m & write) ?
+	O_RDWR | static_cast<integer>(OpenMode & ~(read | write)) :
+	static_cast<integer>(OpenMode);
+}
 
 }
 

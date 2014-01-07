@@ -10,41 +10,43 @@
 
 // For `__NR_*` system call definitions.
 #include <sys/syscall.h>
+// For variable and structure definitions.
 #include <linux/aio_abi.h>
+#include <ccbase/platform.hpp>
 
-namespace neo
-{
+namespace neo {
+namespace detail {
 
-static int
-io_setup(unsigned n, aio_context_t* c)
+static CC_ALWAYS_INLINE
+int io_setup(unsigned n, aio_context_t* c)
 {
 	return syscall(__NR_io_setup, n, c);
 }
 
-static int
-io_destroy(aio_context_t c)
+static CC_ALWAYS_INLINE
+int io_destroy(aio_context_t c)
 {
 	return syscall(__NR_io_destroy, c);
 }
 
-static int
-io_submit(aio_context_t c, long n, iocb** b)
+static CC_ALWAYS_INLINE
+int io_submit(aio_context_t c, long n, iocb** b)
 {
 	return syscall(__NR_io_submit, c, n, b);
 }
 
-static int
-io_cancel(aio_context_t c, iocb* b, io_event* e)
+static CC_ALWAYS_INLINE
+int io_cancel(aio_context_t c, iocb* b, io_event* e)
 {
 	return syscall(__NR_io_cancel, c, b, e);
 }
 
-static int
-io_getevents(aio_context_t c, long min, long max, io_event* e, timespec* t)
+static CC_ALWAYS_INLINE
+int io_getevents(aio_context_t c, long min, long max, io_event* e, timespec* t)
 {
 	return syscall(__NR_io_getevents, c, min, max, e, t);
 }
 
-}
+}}
 
 #endif

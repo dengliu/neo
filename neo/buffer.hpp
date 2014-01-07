@@ -16,15 +16,14 @@
 #include <neo/system.hpp>
 #include <neo/traversal_mode.hpp>
 
-namespace neo
-{
+namespace neo {
 
 template <
 	io_mode        IOMode,
 	open_mode      OpenMode,
 	traversal_mode TraversalMode,
 	bool           Asynchronous,
-	bool           Cache
+	bool           UseDirectIO
 >
 class buffer;
 
@@ -33,12 +32,12 @@ template <
 	open_mode      OpenMode,
 	traversal_mode TraversalMode,
 	bool           Asynchronous,
-	bool           Cache
+	bool           UseDirectIO
 >
-class buffer<input, OpenMode, sequential, Asynchronous, Cache>
+class buffer<input, OpenMode, sequential, Asynchronous, UseDirectIO>
 {
 public:
-	using handle_type      = handle<OpenMode, Cache>;
+	using handle_type      = handle<OpenMode, UseDirectIO>;
 	using context_type     = context<input, Asynchronous>;
 	using input_operation  = operation<input, Asynchronous>;
 	using output_operation = operation<output, Asynchronous>;

@@ -34,7 +34,7 @@ namespace neo
 template <
 	open_mode OpenMode,
 	bool      Asynchronous,
-	bool      Cache
+	bool      UseDirectIO
 >
 class streambuf;
 
@@ -49,12 +49,12 @@ class streambuf;
 // Add support for seek directions, so that f and l are only stored when
 // necessary.
 
-template <open_mode OpenMode, bool Cache>
-class streambuf<OpenMode, true, Cache> :
-	public streambuf_base<OpenMode, Cache>
+template <open_mode OpenMode, bool UseDirectIO>
+class streambuf<OpenMode, true, UseDirectIO> :
+	public streambuf_base<OpenMode, UseDirectIO>
 {
 public:
-	using base = streambuf_base<OpenMode, Cache>;
+	using base = streambuf_base<OpenMode, UseDirectIO>;
 	using size_type = off_t;
 	using pointer = char*;
 protected:

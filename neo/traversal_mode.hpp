@@ -8,21 +8,21 @@
 #ifndef Z6FF0F77F_9481_4BAC_9167_138A93A6487C
 #define Z6FF0F77F_9481_4BAC_9167_138A93A6487C
 
-#include <neo/bitmask_type.hpp>
+#include <neo/bitmask_enum.hpp>
 
 namespace cc
 {
 
 enum class traversal_mode : unsigned
 {
-	sequential,
+	forward,
 	random
 };
 
-static constexpr traversal_mode sequential = traversal_mode::sequential;
-static constexpr traversal_mode random     = traversal_mode::random;
+static constexpr traversal_mode forward = traversal_mode::forward;
+static constexpr traversal_mode random  = traversal_mode::random;
 
-NEO_DEFINE_BITMASK_TYPE(traversal_mode)
+DEFINE_ENUM_BITWISE_OPERATORS(traversal_mode)
 
 }
 
