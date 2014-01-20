@@ -1,8 +1,8 @@
 /*
-** File Name:	request.hpp
-** Author:	Aditya Ramesh
-** Date:	07/10/2013
-** Contact:	_@adityaramesh.com
+** File Name: request.hpp
+** Author:    Aditya Ramesh
+** Date:      07/10/2013
+** Contact:   _@adityaramesh.com
 **
 ** The `neo::request` class provides an abstraction over the
 ** implementation-specific structures used to submit asynchronous IO requests.
@@ -21,7 +21,7 @@
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX
 	#include <cstring>
 	#include <neo/aio_syscall.hpp>
-#elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+#elif PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 	#include <cstring>
 	#include <aio.h>
 	#include <fcntl.h>
@@ -33,7 +33,7 @@ namespace neo
 template <open_mode OpenMode, bool UseDirectIO>
 class handle;
 
-template <io_mode Type, bool Asynchronous>
+template <io_mode Type, bool UseAsyncIO>
 class request;
 
 template <io_mode Type>
@@ -79,7 +79,7 @@ private:
 	static constexpr auto op =
 	(Type & input) != 0 ? IOCB_CMD_PREAD : IOCB_CMD_PWRITE;
 
-	iocb b;
+	mutable iocb b;
 public:
 	template <open_mode OpenMode, bool UseDirectIO>
 	explicit request(const handle<OpenMode, UseDirectIO>& h) noexcept
@@ -97,12 +97,34 @@ public:
 	void handle(const file_descriptor fd) { b.aio_fildes = fd;  }
 	void count(const size_type n)         { b.aio_nbytes = n;   }
 	void offset(const offset_type off)    { b.aio_offset = off; }
+	void done(const bool done)            { this->done = done;  }
 	void buffer(const pointer p)          { b.aio_buf = reinterpret_cast<uint64_t>(p); }
+
+	/*
+	** We need to keep track of the completion state manually, beacuse the
+	** semantics of Linux's `io_submit` function differ from those of OS X's
+	** `aio_suspend`.
+	*/
+
+	bool done() const
+	{
+		// TODO change to 0x1
+		assert((b.aio_buf & 0x1) == 0);
+		auto t = bool{b.aio_buf & 0x1};
+		b.aio_buf = b.aio_buf & ~high_bit;
+		return t;
+	}
+
+	void done(bool done) const
+	{
+		static constexpr uint64_t high_bit = 1ull << 63;
+		b.aio_buf = (b.aio_buf & ~high_bit) | (uint64_t(done) << 63);
+	}
 
 	operator iocb*() { return &b; }
 };
 
-#elif PLATFORM_KERNEL_MACH == PLATFORM_KERNEL_MACH
+#elif PLATFORM_KERNEL_XNU == PLATFORM_KERNEL_XNU
 
 template <io_mode Type>
 class request<Type, true>

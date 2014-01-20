@@ -1,8 +1,8 @@
 /*
-** File Name:	context.hpp
-** Author:	Aditya Ramesh
-** Date:	07/09/2013
-** Contact:	_@adityaramesh.com
+** File Name: context.hpp
+** Author:    Aditya Ramesh
+** Date:      07/09/2013
+** Contact:   _@adityaramesh.com
 */
 
 #ifndef ZE0BB04B6_F20C_4D20_BE7F_21A823AF7522
@@ -23,7 +23,7 @@
 	#include <sys/types.h>
 	// For wrappers over Linux `aio` syscalls.
 	#include <neo/aio_syscall.hpp>
-#elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+#elif PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 	// For `aio_read`, `aio_write`, `aio_suspend`, and `aio_return`.
 	#include <aio.h>
 	// For `timespec`.
@@ -43,7 +43,7 @@ template <io_mode Type, bool Asynchronous>
 class request;
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
-    PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+    PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 
 namespace detail {
 
@@ -223,7 +223,7 @@ public:
 	}
 };
 
-#elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+#elif PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 
 template <>
 class context<true>

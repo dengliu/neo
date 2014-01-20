@@ -1,8 +1,8 @@
 /*
-** File Name:	handle.hpp
-** Author:	Aditya Ramesh
-** Date:	07/09/2013
-** Contact:	_@adityaramesh.com
+** File Name: handle.hpp
+** Author:    Aditya Ramesh
+** Date:      07/09/2013
+** Contact:   _@adityaramesh.com
 **
 ** The handle class is an abstraction over the low-level platform functions for
 ** opening and closing file handles, and for allocating IO buffers that are good
@@ -25,7 +25,7 @@
 #include <neo/open_mode.hpp>
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
-    PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+    PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 	#include <cassert>
 	#include <cstdlib>
 	#include <fcntl.h>
@@ -153,7 +153,7 @@ public:
 	operator file_descriptor() const { return fd; }
 };
 
-#elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+#elif PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 
 template <open_mode OpenMode, bool UseDirectIO>
 class handle

@@ -1,18 +1,19 @@
 /*
-** File Name:	open_mode.hpp
-** Author:	Aditya Ramesh
-** Date:	07/09/2013
-** Contact:	_@adityaramesh.com
+** File Name: open_mode.hpp
+** Author:    Aditya Ramesh
+** Date:      07/09/2013
+** Contact:   _@adityaramesh.com
 */
 
 #ifndef ZBBA9CC37_2920_4B73_8CD5_26374197953F
 #define ZBBA9CC37_2920_4B73_8CD5_26374197953F
 
+#include <type_traits>
 #include <ccbase/platform.hpp>
 #include <neo/bitmask_enum.hpp>
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
-    PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+    PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 	// For `O_*` macros.
 	#include <fcntl.h>
 #endif
@@ -20,7 +21,7 @@
 namespace neo {
 
 #if PLATFORM_KERNEL == PLATFORM_KERNEL_LINUX || \
-    PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+    PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 
 enum class open_mode : int
 {
@@ -39,7 +40,7 @@ static constexpr open_mode truncate = open_mode::truncate;
 
 DEFINE_ENUM_BITWISE_OPERATORS(open_mode)
 
-constexpr open_mode
+constexpr int
 posix(const open_mode& m)
 {
 	/*
@@ -53,9 +54,11 @@ posix(const open_mode& m)
 	** representation.
 	*/
 
-	return (m & read) && (m & write) ?
-	O_RDWR | static_cast<integer>(OpenMode & ~(read | write)) :
-	static_cast<integer>(OpenMode);
+	using integer = std::underlying_type<open_mode>::type;
+
+	return !!(m & read) && !!(m & write) ?
+	O_RDWR | static_cast<integer>(m & ~(read | write)) :
+	static_cast<integer>(m);
 }
 
 }

@@ -1,8 +1,8 @@
 /*
-** File Name:	io_mode.hpp
-** Author:	Aditya Ramesh
-** Date:	07/10/2013
-** Contact:	_@adityaramesh.com
+** File Name: io_mode.hpp
+** Author:    Aditya Ramesh
+** Date:      07/10/2013
+** Contact:   _@adityaramesh.com
 */
 
 #ifndef Z888D107F_0EF8_4F90_B3D2_D09E7D9AEE57

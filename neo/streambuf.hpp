@@ -1,8 +1,8 @@
 /*
-** File Name:	streambuf.hpp
-** Author:	Aditya Ramesh
-** Date:	07/09/2013
-** Contact:	_@adityaramesh.com
+** File Name: streambuf.hpp
+** Author:    Aditya Ramesh
+** Date:      07/09/2013
+** Contact:   _@adityaramesh.com
 */
 
 #ifndef ZBA4ECAB3_7213_4303_99BA_B94E54C1682A
@@ -20,7 +20,7 @@
 	#include <time.h>
 	#include <unistd.h>
 	#include <neo/aio_syscall>
-#elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+#elif PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 	#include <aio.h>
 	#include <fcntl.h>
 	#include <time.h>
@@ -260,7 +260,7 @@ private:
 	//}
 }
 
-#elif PLATFORM_KERNEL == PLATFORM_KERNEL_MACH
+#elif PLATFORM_KERNEL == PLATFORM_KERNEL_XNU
 
 #endif
 

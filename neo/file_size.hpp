@@ -1,8 +1,8 @@
 /*
-** File Name:	size.hpp
-** Author:	Aditya Ramesh
-** Date:	07/09/2013
-** Contact:	_@adityaramesh.com
+** File Name: size.hpp
+** Author:    Aditya Ramesh
+** Date:      07/09/2013
+** Contact:   _@adityaramesh.com
 */
 
 #ifndef Z1A92501E_D056_4195_8AA2_4DE209C3BA60
@@ -12,7 +12,7 @@
 #include <ccbase/platform.hpp>
 
 #if CCBASE_KERNEL == CCBASE_KERNEL_LINUX || \
-    CCBASE_KERNEL == CCBASE_KERNEL_MACH
+    CCBASE_KERNEL == CCBASE_KERNEL_XNU
 	#include <unistd.h>
 	#include <sys/stat.h>
 	#include <sys/types.h>
@@ -22,7 +22,7 @@ namespace neo {
 namespace detail {
 
 #if CCBASE_KERNEL == CCBASE_KERNEL_LINUX || \
-    CCBASE_KERNEL == CCBASE_KERNEL_MACH
+    CCBASE_KERNEL == CCBASE_KERNEL_XNU
 
 CC_ALWAYS_INLINE off_t
 size(const int fd)
